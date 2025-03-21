@@ -58,6 +58,12 @@ extension EditorTextView {
             guard let textView = notification.object as? NSTextView else {
                 return
             }
+            // Add newline at the end of a file and set caret position back
+            let caretRange = textView.selectedRange()
+            if !textView.string.hasSuffix("\n") {
+                textView.textStorage?.replaceCharacters(in: caretRange, with: "\n")
+            }
+            textView.setSelectedRange(caretRange)
             
             self.parent.text = textView.string
             self.selectedRanges = textView.selectedRanges
@@ -80,11 +86,6 @@ final class EditorTextNSView: NSView {
     var text: String {
         didSet {
             textView.string = text
-            scrollView.verticalRulerView?.needsDisplay = true
-            
-            if !text.hasSuffix("\n") {
-                textView.textStorage?.replaceCharacters(in: NSRange(location: textView.string.count, length: 0), with: "\n")
-            }
         }
     }
     var selectedRanges: [NSValue] = [] {
@@ -101,16 +102,27 @@ final class EditorTextNSView: NSView {
     private var font: NSFont?
     private lazy var textView: NSTextView = {
         let textView = NSTextView()
-        textView.backgroundColor         = NSColor.textBackgroundColor
-        textView.delegate                = self.delegate
-        textView.drawsBackground         = true
-        textView.font                    = self.font
-        textView.isHorizontallyResizable = true
-        textView.isVerticallyResizable   = true
-        textView.textColor               = NSColor.labelColor
-        textView.allowsUndo              = true
+        
         textView.isEditable = true
         textView.isSelectable = true
+        textView.allowsUndo = true
+        textView.drawsBackground = true
+        textView.isHorizontallyResizable = true
+        textView.isVerticallyResizable = true
+        
+        textView.font = self.font
+        textView.backgroundColor = NSColor.textBackgroundColor
+        textView.textColor = NSColor.textColor
+        
+        textView.delegate = self.delegate
+        textView.textStorage?.delegate = self.delegate
+        
+        // Disable soft wrapping, enable autoresizing
+        textView.textContainer?.widthTracksTextView = false
+        textView.textContainer?.containerSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.lineBreakMode = .byClipping
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         return textView
     }()
     
@@ -119,6 +131,7 @@ final class EditorTextNSView: NSView {
         sv.documentView = textView
         sv.hasVerticalScroller = true
         sv.hasHorizontalScroller = true
+        sv.autohidesScrollers = false
         sv.translatesAutoresizingMaskIntoConstraints = false
         return sv
     }()

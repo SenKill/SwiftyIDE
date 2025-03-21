@@ -43,7 +43,6 @@ final class EditorGutterNSView: NSRulerView {
     
     @objc private func textViewDidChangeSelection(_ notification: Notification) {
         self.selectedRanges = textView?.selectedRanges ?? []
-        print(self.selectedRanges)
         self.needsDisplay = true
     }
     
@@ -58,57 +57,73 @@ final class EditorGutterNSView: NSRulerView {
         let visibleRect = textView.visibleRect
         let visibleGlyphRange = layoutManager.glyphRange(forBoundingRect: visibleRect, in: textContainer)
         let relativePoint = self.convert(NSZeroPoint, from: textView)
+        // Starting glyph location of a row
         var glyphIndex = visibleGlyphRange.location
         // Retrieve selected character ranges from the text view
         let selectedCharRanges = textView.selectedRanges.compactMap { ($0 as NSValue).rangeValue }
-        print(selectedCharRanges)
-        
-        // Computing the number of lines preceding the visibleCharRange.
+        // Compute the number of lines preceding the visibleCharRange
         var lineNumber: Int = countOccurrences(in: textView.string, pattern: "\n", range: NSMakeRange(0, visibleGlyphRange.location))
+        var lastLineRect: NSRect = .zero
         
-        while glyphIndex < NSMaxRange(visibleGlyphRange) {
+        while glyphIndex < visibleGlyphRange.upperBound {
             var effectiveRange = NSRange(location: 0, length: 0)
-            // Get the line fragment rect even if it's empty.
-            let lineRect = layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: &effectiveRange, withoutAdditionalLayout: true)
             
-            // Calculate the y position in the ruler view's coordinate system.
-            let yPosition = lineRect.origin.y + relativePoint.y
+            // Get the line fragment rect
+            lastLineRect = layoutManager.lineFragmentRect(forGlyphAt: glyphIndex, effectiveRange: &effectiveRange, withoutAdditionalLayout: true)
+            // Calculate the y position in the ruler view's coordinate system
+            let yRulerPos = lastLineRect.origin.y + relativePoint.y
             
             // Check if the line's rect intersects the drawing rect
-            if yPosition + lineRect.height >= rect.minY && yPosition <= rect.maxY {
-                let yPos = yPosition + lineRect.height / 2
-                drawLineNumber(with: lineNumber, at: yPos)
+            if yRulerPos + lastLineRect.height >= rect.minY && yRulerPos <= rect.maxY {
+                let yLinePos = yRulerPos + lastLineRect.height / 2
+                drawLineNumber(with: lineNumber, at: yLinePos)
             }
             
-            // Convert the glyph range to a character range
-            let charRange = layoutManager.characterRange(forGlyphRange: NSMakeRange(glyphIndex, effectiveRange.length), actualGlyphRange: nil)
-            // Check if any of the selected ranges intersect with this line's character range.
-            let isSelected = selectedCharRanges.contains { selectionRange in
-                if selectionRange.length == 0 {
-                    let isAtEnd = selectionRange.location >= textView.string.count && glyphIndex == NSMaxRange(visibleGlyphRange)-1
-                    return NSLocationInRange(selectionRange.location, charRange) || isAtEnd
+            // Check if any of the selected ranges intersect with this line's character range
+            var isSelected = false
+            if let selectedRange = selectedCharRanges.first {
+                if selectedRange.length > 0 {
+                    let maxSelection = selectedRange.location + selectedRange.length
+                    isSelected = (effectiveRange.length + glyphIndex) > selectedRange.location && glyphIndex < maxSelection
                 } else {
-                    return NSIntersectionRange(selectionRange, charRange).length > 0
+                    isSelected = selectedRange.location >= glyphIndex && selectedRange.location < effectiveRange.length + glyphIndex
                 }
             }
-                    
-            // If the line is selected, draw a background rectangle in the gutter area.
-            if isSelected {
-                let bgRect = NSRect(x: 0, y: yPosition, width: self.ruleThickness, height: lineRect.height)
-                Settings.selectionGutterColor.setFill() // Or a custom color
-                bgRect.fill()
-            }
             
-            // Move to the next line fragment.
-            glyphIndex = NSMaxRange(effectiveRange)
+            // If the line is selected, draw a background rectangle in the gutter area
+            if isSelected {
+                drawSelectionRow(y: yRulerPos, height: lastLineRect.height)
+            }
+            // Move to the next line
+            glyphIndex = effectiveRange.upperBound
             lineNumber += 1
+        }
+        
+        // Draw last line
+        let lastCharIndex = textView.string.utf16.count - 1
+        if lastCharIndex >= 0 {
+            // Calculate last char's glyph
+            let lastGlyphRange = layoutManager.glyphRange(forCharacterRange: NSRange(location: lastCharIndex, length: 1), actualCharacterRange: nil)
+            
+            // Calculate last ruler's y position based on previous' line rect
+            let yRulerPos = lastLineRect.origin.y + relativePoint.y + lastLineRect.height
+            if yRulerPos + lastLineRect.height >= rect.minY && yRulerPos <= rect.maxY {
+                let yLinePos = yRulerPos + lastLineRect.height / 2
+                drawLineNumber(with: lineNumber, at: yLinePos)
+                
+                // Draw selection if a caret is on the last row
+                if let selectedRange = selectedCharRanges.first,
+                   selectedRange.location == lastGlyphRange.upperBound {
+                    drawSelectionRow(y: yRulerPos, height: lastLineRect.height)
+                }
+            }
         }
     }
     
     func drawLineNumber(with lineNumber: Int, at yPosition: CGFloat) {
         let label = "\(lineNumber)"
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 10),
+            .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular),
             .foregroundColor: NSColor.gray
         ]
         let attLabel = NSAttributedString(string: label, attributes: attributes)
@@ -116,6 +131,12 @@ final class EditorGutterNSView: NSRulerView {
         let xPos = self.ruleThickness - labelSize.width - 5
         let yPos = yPosition - labelSize.height / 2.0
         attLabel.draw(at: NSPoint(x: xPos, y: yPos))
+    }
+    
+    func drawSelectionRow(y: CGFloat, height: CGFloat) {
+        let bgRect = NSRect(x: 0, y: y, width: self.ruleThickness, height: height)
+        Settings.selectionGutterColor.setFill() // Or a custom color
+        bgRect.fill()
     }
     
     func countOccurrences(in text: String, pattern: String, range: NSRange) -> Int {
