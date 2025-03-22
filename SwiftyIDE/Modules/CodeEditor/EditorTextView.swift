@@ -10,7 +10,7 @@ import SwiftUI
 
 struct EditorTextView: NSViewRepresentable {
     @Binding var text: String
-    var font: NSFont = .systemFont(ofSize: 14, weight: .regular)
+    var font: NSFont = .monospacedSystemFont(ofSize: 13, weight: .regular)
     
     var onEditingChanged: () -> Void       = {}
     var onCommit        : () -> Void       = {}
@@ -37,14 +37,16 @@ struct EditorTextView: NSViewRepresentable {
 
 // MARK: - Coordinator
 extension EditorTextView {
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate {
         var parent: EditorTextView
         var selectedRanges: [NSValue] = []
+        lazy private var syntaxHighlighter = SyntaxHighlighter(defaultFont: parent.font)
         
         init(_ parent: EditorTextView) {
             self.parent = parent
         }
         
+        // MARK: - NSTextViewDelegate
         func textDidBeginEditing(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else {
                 return
@@ -73,9 +75,16 @@ extension EditorTextView {
             guard let textView = notification.object as? NSTextView else {
                 return
             }
-            
             self.parent.text = textView.string
             self.parent.onCommit()
+        }
+        
+        // MARK: - NSTextStorage Delegate
+        func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions, range editedRange: NSRange, changeInLength delta: Int) {
+            // Track only those changes, where text storage updates whole text
+            if editedMask.contains(.editedCharacters) && delta == 0 {
+                self.syntaxHighlighter.highlightSyntax(in: textStorage, range: editedRange)
+            }
         }
     }
 }
@@ -98,7 +107,7 @@ final class EditorTextNSView: NSView {
         }
     }
     
-    private weak var delegate: NSTextViewDelegate?
+    private weak var delegate: (NSTextViewDelegate & NSTextStorageDelegate)?
     private var font: NSFont?
     private lazy var textView: NSTextView = {
         let textView = NSTextView()
@@ -109,10 +118,11 @@ final class EditorTextNSView: NSView {
         textView.drawsBackground = true
         textView.isHorizontallyResizable = true
         textView.isVerticallyResizable = true
+        textView.isRichText = false
         
         textView.font = self.font
         textView.backgroundColor = NSColor.textBackgroundColor
-        textView.textColor = NSColor.textColor
+        textView.textColor = NSColor.labelColor
         
         textView.delegate = self.delegate
         textView.textStorage?.delegate = self.delegate
@@ -137,7 +147,7 @@ final class EditorTextNSView: NSView {
     }()
     
     // MARK: - Init
-    init(text: String, font: NSFont? = nil, delegate: NSTextViewDelegate) {
+    init(text: String, font: NSFont? = nil, delegate: (NSTextViewDelegate & NSTextStorageDelegate)) {
         self.font = font
         self.text = text
         self.delegate = delegate
