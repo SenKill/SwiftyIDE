@@ -15,6 +15,7 @@ final class IDEViewModel: ObservableObject {
     let outputAppendPublisher = PassthroughSubject<NSAttributedString?, Never>()
     
     private var runningProcess: Process?
+    private var outputSource: DispatchSourceRead?
     
     func runScript() {
         runningProcess?.terminate()
@@ -28,6 +29,8 @@ final class IDEViewModel: ObservableObject {
     func stopScript() {
         runningProcess?.terminate()
         runningProcess = nil
+        outputSource?.cancel()
+        outputSource = nil
     }
     
     func clearOutput() {
@@ -69,49 +72,68 @@ final class IDEViewModel: ObservableObject {
         do {
             runningProcess = process
             isScriptRunning = true
-            try process.run()
+            readOutputPipe(from: outputPipe)
             // Runs concurrently
             process.terminationHandler = onScriptTermination
+            try process.run()
             return true
         } catch let error as NSError {
             print("ERROR: Failed to run script: \(error.localizedDescription)")
             return false
         }
     }
-        
+    
+    private func readOutputPipe(from outputPipe: Pipe) {
+        // Passing the output pipe's file descriptor and async queue to read from the output pipe to an DispatchSource object which is used to read data from streams
+        self.outputSource = DispatchSource.makeReadSource(
+            fileDescriptor: outputPipe.fileHandleForReading.fileDescriptor,
+            queue: DispatchQueue.global(qos: .userInitiated))
+        // Whenever there are any events check for new output
+        outputSource?.setEventHandler { [weak self] in
+            let data = outputPipe.fileHandleForReading.availableData
+            if let outputString = try? NSAttributedString(data: data, documentAttributes: nil) {
+                // Making changes on the main queue
+                DispatchQueue.main.async {
+                    self?.outputAppendPublisher.send(outputString)
+                }
+            }
+        }
+        outputSource?.resume()
+    }
+    
     @Sendable
     private func onScriptTermination(_ process: Process?) {
         guard   let process = process,
-                let outputPipe = process.standardOutput as? Pipe,
                 let errorPipe = process.standardError as? Pipe else {
             DispatchQueue.main.async {
                 self.isScriptRunning = false
             }
-            print("ERROR: Couldn't get script's process or pipes")
+            print("ERROR: Couldn't get script's process or error pipe")
             runningProcess = nil
             return
         }
+        let errorData = try? errorPipe.fileHandleForReading.readToEnd()
         
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        
-        // Switch to main thread
         DispatchQueue.main.async {
-            var commonTextAttributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12),
-                .foregroundColor: NSColor.black
-            ]
-            
-            if let output = String(data: outputData, encoding: .utf8), !output.isEmpty {
-                let attrString = NSAttributedString(string: output, attributes: commonTextAttributes)
-                self.outputAppendPublisher.send(attrString)
-            } else if let error = String(data: errorData, encoding: .utf8) {
-                commonTextAttributes[.foregroundColor] = NSColor.systemRed
-                let attrString = NSAttributedString(string: error, attributes: commonTextAttributes)
-                self.outputAppendPublisher.send(attrString)
+            // Print out error output if there any
+            if let errorData = errorData,
+               let error = String(data: errorData, encoding: .utf8) {
+                let errorTextAttributes: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: 12),
+                    .foregroundColor: NSColor.red
+                ]
+                let errorAttrString = NSAttributedString(string: error, attributes: errorTextAttributes)
+                self.outputAppendPublisher.send(errorAttrString)
             }
+            let termStatusAttributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium)
+            ]
+            let termStatusAttrString = NSAttributedString(string: "\nProcess exited with code \(process.terminationStatus)\n\n", attributes: termStatusAttributes)
+            self.outputAppendPublisher.send(termStatusAttrString)
             self.isScriptRunning = false
         }
         runningProcess = nil
+        outputSource?.cancel()
+        outputSource = nil
     }
 }
