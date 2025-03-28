@@ -10,7 +10,7 @@ import SwiftUI
 
 struct EditorTextView: NSViewRepresentable {
     @Binding var text: String
-    var font: NSFont = .monospacedSystemFont(ofSize: 13, weight: .regular)
+    var font: NSFont = Settings.defaultCodeFont
     
     var onEditingChanged: () -> Void       = {}
     var onCommit        : () -> Void       = {}
@@ -44,6 +44,7 @@ extension EditorTextView {
         
         init(_ parent: EditorTextView) {
             self.parent = parent
+            super.init()
         }
         
         // MARK: - NSTextViewDelegate
@@ -61,11 +62,13 @@ extension EditorTextView {
                 return
             }
             // Add newline at the end of a file and set caret position back
-            let caretRange = textView.selectedRange()
             if !textView.string.hasSuffix("\n") {
+                let caretRange = textView.selectedRange()
+                textView.textStorage?.beginEditing()
                 textView.textStorage?.replaceCharacters(in: caretRange, with: "\n")
+                textView.textStorage?.endEditing()
+                textView.setSelectedRange(caretRange)
             }
-            textView.setSelectedRange(caretRange)
             
             self.parent.text = textView.string
             self.selectedRanges = textView.selectedRanges
@@ -152,10 +155,16 @@ final class EditorTextNSView: NSView {
         self.text = text
         self.delegate = delegate
         super.init(frame: .zero)
+        NotificationCenter.default.addObserver(self, selector: #selector(selectErrorPosition), name: .selectedErrorLink, object: nil)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    // MARK: - Public methods
+    func setSelection(at range: NSRange) {
+        textView.setSelectedRange(range)
     }
     
     // MARK: - Life Cycle
@@ -165,6 +174,7 @@ final class EditorTextNSView: NSView {
         setupGutterView()
     }
     
+    // MARK: - Private methods
     private func setUpConstraints() {
         addSubview(scrollView)
         NSLayoutConstraint.activate([
@@ -180,5 +190,39 @@ final class EditorTextNSView: NSView {
         scrollView.verticalRulerView = gutterView
         scrollView.hasVerticalRuler = true
         scrollView.rulersVisible = true
+    }
+    
+    @objc
+    private func selectErrorPosition(notification: NSNotification) {
+        guard let stringLink = notification.object as? String else { return }
+        // Link looks like "row,col"
+        let position = stringLink.components(separatedBy: ",")
+        print(position)
+        guard let row = Int(position.first ?? ""), let col = Int(position.last ?? "") else { return }
+        let numberOfChars = getCharPosition(row: row, col: col, in: text)
+        let errorRange = NSRange(location: numberOfChars, length: 0)
+        textView.scrollRangeToVisible(errorRange)
+        selectedRanges = [NSValue(range: errorRange)]
+        textView.window?.makeFirstResponder(textView)
+    }
+    
+    private func getCharPosition(row: Int, col: Int, in text: String) -> Int {
+        var currentRow = 1
+        var currentCol = 1
+        var charCnt = 0
+        
+        // Count number of chars there are up to the target char position
+        for ch in text {
+            if currentRow == row && currentCol == col {
+                break
+            }
+            if ch == "\n" {
+                currentRow += 1
+            } else if currentRow == row {
+                currentCol += 1
+            }
+            charCnt += 1
+        }
+        return charCnt
     }
 }

@@ -13,7 +13,7 @@ struct OutputTextView: NSViewRepresentable {
     let appendPublisher: PassthroughSubject<NSAttributedString?, Never>
     
     func makeNSView(context: Context) -> OutputTextNSView {
-        let textView = OutputTextNSView()
+        let textView = OutputTextNSView(delegate: context.coordinator)
         context.coordinator.setupSubscriptions(appendPublisher: appendPublisher, textView: textView)
         return textView
     }
@@ -45,7 +45,19 @@ struct OutputTextView: NSViewRepresentable {
     }
 }
 
+// MARK: - NSTextViewDelegate
+extension OutputTextView.Coordinator: NSTextViewDelegate {
+    func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+        // Sends notification to EditorTextView
+        NotificationCenter.default.post(name: .selectedErrorLink, object: link)
+        return true
+    }
+}
+
+// MARK: - OutputTextNSView
 final class OutputTextNSView: NSView {
+    weak var delegate: NSTextViewDelegate?
+    
     // MARK: - Setting views
     private lazy var textView: NSTextView = {
         let textView = NSTextView()
@@ -53,6 +65,7 @@ final class OutputTextNSView: NSView {
         textView.isSelectable = true
         textView.isHorizontallyResizable = true
         textView.isVerticallyResizable = true
+        textView.delegate = delegate
         
         textView.backgroundColor = NSColor.textBackgroundColor
         textView.textColor = NSColor.labelColor
@@ -86,7 +99,8 @@ final class OutputTextNSView: NSView {
     }
     
     // MARK: - Life Cycle
-    init() {
+    init(delegate: NSTextViewDelegate) {
+        self.delegate = delegate
         super.init(frame: .zero)
     }
     
