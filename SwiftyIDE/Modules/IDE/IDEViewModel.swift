@@ -11,6 +11,7 @@ import Combine
 final class IDEViewModel: ObservableObject {
     @Published var codeText: String = ""
     @Published var isScriptRunning: Bool = false
+    @Published var didErrorHappen: Bool = false
     // Publisher to communicate with custom NSTextView on which is used to present output
     let outputAppendPublisher = PassthroughSubject<NSAttributedString?, Never>()
     
@@ -56,6 +57,7 @@ final class IDEViewModel: ObservableObject {
     private func runScript(with url: URL) -> Bool {
         // To be sure :)
         stopScript()
+        didErrorHappen = false
         // A class to run and track an executable
         // MARK: Doesn't show live output
         // TODO: Make live output
@@ -139,16 +141,18 @@ private extension IDEViewModel {
                 self.addClickableUrl(to: errorAttrString)
                 self.outputAppendPublisher.send(errorAttrString)
             }
+            let returnCode = process.terminationStatus
             let termStatusAttributes: [NSAttributedString.Key: Any] = [
                 .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: process.terminationStatus == 0
+                .foregroundColor: returnCode == 0
                     ? NSColor(red: 0, green: 0.6, blue: 0, alpha: 1)  // Success: Green
                     : NSColor(red: 0.8, green: 0.4, blue: 0, alpha: 1) // Failure: Orange
                 
             ]
-            let termStatusAttrString = NSAttributedString(string: "\nProcess exited with code \(process.terminationStatus)\n\n\n", attributes: termStatusAttributes)
+            let termStatusAttrString = NSAttributedString(string: "\nProcess exited with code \(returnCode)\n\n\n", attributes: termStatusAttributes)
             self.outputAppendPublisher.send(termStatusAttrString)
             self.isScriptRunning = false
+            self.didErrorHappen = returnCode != 0
         }
         runningProcess = nil
         outputSource?.cancel()

@@ -41,24 +41,15 @@ struct IDEView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    vm.runScript()
-                } label: {
-                    Image(systemName: "play.fill")
-                }
-                .disabled(vm.isScriptRunning)
+                    Button {
+                        vm.runScript()
+                    } label: {
+                        Image(systemName: "play.fill")
+                    }
+                    .disabled(vm.isScriptRunning)
+                
             } label: {
                 Text("Compile program")
-            }
-            if vm.isScriptRunning {
-                ToolbarItemGroup(placement: .principal) {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .controlSize(.small)
-                    
-                } label: {
-                    Text("Program is running")
-                }
             }
             ToolbarItemGroup(placement: .cancellationAction) {
                 Button {
@@ -69,6 +60,22 @@ struct IDEView: View {
                 .disabled(!vm.isScriptRunning)
             } label: {
                 Text("Stop program")
+            }
+            if vm.isScriptRunning {
+                ToolbarItemGroup(placement: .principal) {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .controlSize(.small)
+                } label: {
+                    Text("Program is running")
+                }
+            } else {
+                ToolbarItemGroup(placement: .principal) {
+                    Image(systemName: vm.didErrorHappen ? "x.circle.fill" : "checkmark.circle.fill")
+                        .foregroundStyle(vm.didErrorHappen ? .red : .green)
+                } label: {
+                    Text(vm.didErrorHappen ? "Program returned an error" : "Program compiled successfully")
+                }
             }
         }
     }
