@@ -9,6 +9,12 @@ import SwiftUI
 import Combine
 
 final class IDEViewModel: ObservableObject {
+    // For program output's attributes
+    enum TerminationType: String {
+        case warning
+        case error
+    }
+    
     @Published var codeText: String = ""
     @Published var isScriptRunning: Bool = false
     @Published var didErrorHappen: Bool = false
@@ -127,18 +133,11 @@ private extension IDEViewModel {
         let errorData = try? errorPipe.fileHandleForReading.readToEnd()
         
         DispatchQueue.main.async {
-            // Print out error output if there any
+            // Print out error/warning output if there any
             if let errorData = errorData,
                let error = String(data: errorData, encoding: .utf8) {
-                
-                // Style
-                let errorTextAttributes: [NSAttributedString.Key: Any] = [
-                    .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold),
-                    .foregroundColor: NSColor(red: 0.8, green: 0, blue: 0, alpha: 1)
-                ]
-                
-                let errorAttrString = NSMutableAttributedString(string: error, attributes: errorTextAttributes)
-                self.addClickableUrl(to: errorAttrString)
+                let errorAttrString = NSMutableAttributedString(string: error)
+                self.styleTerminationInfoString(errorAttrString)
                 self.outputAppendPublisher.send(errorAttrString)
             }
             let returnCode = process.terminationStatus
@@ -147,9 +146,9 @@ private extension IDEViewModel {
                 .foregroundColor: returnCode == 0
                     ? NSColor(red: 0, green: 0.6, blue: 0, alpha: 1)  // Success: Green
                     : NSColor(red: 0.8, green: 0.4, blue: 0, alpha: 1) // Failure: Orange
-                
             ]
             let termStatusAttrString = NSAttributedString(string: "\nProcess exited with code \(returnCode)\n\n\n", attributes: termStatusAttributes)
+            
             self.outputAppendPublisher.send(termStatusAttrString)
             self.isScriptRunning = false
             self.didErrorHappen = returnCode != 0
@@ -159,26 +158,67 @@ private extension IDEViewModel {
         outputSource = nil
     }
     
-    func addClickableUrl(to attributedErrorString: NSMutableAttributedString) {
-        guard let regexWholeRange = try? NSRegularExpression(pattern: "\(Settings.standardScriptName):([0-9]*):([0-9]*):.*", options: [.anchorsMatchLines]) else {
+    func styleTerminationInfoString(_ attributedString: NSMutableAttributedString) {
+        // Example :1:5: warning:
+        let pattern = ".*:([0-9]+):([0-9]+): ([a-z]+): ((?:.|\n)*?(?=\n\n|\\Z))"
+        guard let regexWholeRange = try? NSRegularExpression(pattern: pattern, options: []) else {
             print("ERROR: addClickableUrl() | Couldn't init regex")
             return
         }
-        let errorString = attributedErrorString.string
-        regexWholeRange.enumerateMatches(in: errorString, range: NSRange(location: 0, length: errorString.count-1)) { match, _, _ in
-            if let match = match,
-               let (rowPosition, colPosition) = parseErrorsPosition(from: errorString, for: match) {
-                let wholeStringNSRange = match.range(at: 0)
-                attributedErrorString.addAttribute(.link, value: "\(rowPosition),\(colPosition)", range: wholeStringNSRange)
+        let errorString = attributedString.string
+        let errorStringRange = NSRange(location: 0, length: errorString.count-1)
+        
+        regexWholeRange.enumerateMatches(in: errorString, range: errorStringRange) { match, _, _ in
+            if let match = match {
+                setGeneralAttributes(to: attributedString, for: match)
+                addClickableUrl(to: attributedString, for: match)
             }
         }
     }
     
-    // Match is of type NSTextCheckingResult and it's method range(at: ) returns range of the whole match or it's capture groups
-    func parseErrorsPosition(from errorString: String, for match: NSTextCheckingResult) -> (Int, Int)? {
+    func setGeneralAttributes(to termString: NSMutableAttributedString, for match: NSTextCheckingResult) {
+        let wholeRange = match.range
+        // Third group: termination type (error | warning)
+        let terminationTypeNSRange = match.range(at: 3)
+        
+        guard let terminationTypeRange = Range(terminationTypeNSRange, in: termString.string),
+              let termType = TerminationType(rawValue: String(termString.string[terminationTypeRange]))
+        else {
+            print("ERROR: setGeneralAttributes() | Couldn't get termination type")
+            return
+        }
+        let attributes: [NSAttributedString.Key: Any]
+        
+        switch termType {
+        case .warning:
+            attributes = [
+                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold),
+                .foregroundColor: NSColor(red: 1, green: 0.65, blue: 0, alpha: 1) // Orange
+            ]
+        case .error:
+            attributes = [
+                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold),
+                .foregroundColor: NSColor(red: 0.8, green: 0, blue: 0, alpha: 1) // Red
+            ]
+        }
+        termString.setAttributes(attributes, range: wholeRange)
+    }
+    
+    func addClickableUrl(to termString: NSMutableAttributedString, for match: NSTextCheckingResult) {
         let rowNSRange = match.range(at: 1)
         let columnNSRange = match.range(at: 2)
-        
+        if let (rowPosition, colPosition) = parseErrorsPosition(
+            from: termString.string, rowNSRange: rowNSRange, columnNSRange: columnNSRange) {
+            let combinedNSRange = NSRange(
+                location: rowNSRange.location,
+                length: rowNSRange.length + columnNSRange.length + 1)
+            
+            termString.addAttribute(.link, value: "\(rowPosition),\(colPosition)", range: combinedNSRange)
+        }
+    }
+    
+    // Match is of type NSTextCheckingResult and it's method range(at: ) returns range of the whole match or it's capture groups
+    func parseErrorsPosition(from errorString: String, rowNSRange: NSRange, columnNSRange: NSRange) -> (Int, Int)? {
         guard let rowRange = Range(rowNSRange, in: errorString),
               let columnRange = Range(columnNSRange, in: errorString) else {
             print("ERROR: addClickableUrl() | Couldn't get range from nsranges")
