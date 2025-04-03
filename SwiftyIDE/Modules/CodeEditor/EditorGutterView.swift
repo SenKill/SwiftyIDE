@@ -86,12 +86,7 @@ final class EditorGutterNSView: NSRulerView {
             }
             
             // Workaround to fix problem with empty string
-            if lastLineRect.height == 14 {
-                lastLineHeight = 16
-            } else {
-                lastLineHeight = lastLineRect.height
-            }
-            
+            lastLineHeight = 17
             // Check if the line's rect intersects the drawing rect
             if yRulerPos + lastLineHeight >= rect.minY && yRulerPos <= rect.maxY {
                 let yLinePos = yRulerPos + lastLineHeight / 2

@@ -10,9 +10,22 @@
 		F75C0E2E2D7B95E300D55AE7 /* SwiftyIDE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftyIDE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F77116D32D9F190E0001808A /* Exceptions for "SwiftyIDE" folder in "SwiftyIDE" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F75C0E2D2D7B95E300D55AE7 /* SwiftyIDE */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F75C0E302D7B95E300D55AE7 /* SwiftyIDE */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F77116D32D9F190E0001808A /* Exceptions for "SwiftyIDE" folder in "SwiftyIDE" target */,
+			);
 			path = SwiftyIDE;
 			sourceTree = "<group>";
 		};
@@ -259,6 +272,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwiftyIDE/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -287,6 +301,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwiftyIDE/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
