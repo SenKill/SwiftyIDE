@@ -13,10 +13,6 @@ struct EditorTextView: NSViewRepresentable {
     var font: NSFont = .defaultCodeFont
     var textColor: NSColor = .labelColor
     
-    var onEditingChanged: () -> Void       = {}
-    var onCommit        : () -> Void       = {}
-    var onTextChange    : (String) -> Void = { _ in }
-    
     func makeCoordinator() -> Coordinator {
         return Coordinator(self)
     }
@@ -50,15 +46,6 @@ extension EditorTextView {
         }
         
         // MARK: - NSTextViewDelegate
-        func textDidBeginEditing(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else {
-                return
-            }
-            
-            self.parent.text = textView.string
-            self.parent.onEditingChanged()
-        }
-        
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else {
                 return
@@ -76,15 +63,54 @@ extension EditorTextView {
             self.selectedRanges = textView.selectedRanges
         }
         
-        func textDidEndEditing(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else {
-                return
+        func textView(_ textView: NSTextView,
+                      shouldChangeTextIn range: NSRange,
+                      replacementString string: String?) -> Bool {
+            guard let textStorage = textView.textStorage else { return true }
+            
+            // Check if Enter key was pressed
+            if string == "\n" {
+                let indentLevel = calculateIndentation(textStorage: textStorage, range: range)
+                if indentLevel == 0 { return true }
+                let indentString = String(repeating: "\t", count: indentLevel)
+                
+                // Insert new line with proper indentation
+                let newText = "\n" + indentString
+                textView.insertText(newText, replacementRange: range)
+                return false // Prevent default behavior
             }
-            self.parent.text = textView.string
-            self.parent.onCommit()
+            
+            // Check if new char is a closing bracket and remove 1 tab
+            if string == "}" {
+                let subString = textStorage.mutableString.substring(to: range.location)
+                if subString.last == "\t" {
+                    let deleteRange = NSRange(location: range.location-1, length: 1)
+                    textStorage.mutableString.replaceCharacters(in: deleteRange, with: "}")
+                    return false
+                }
+            }
+            
+            return true
         }
         
-        // MARK: - NSTextStorage Delegate
+        /// Calculates how many tabulations should be inserted
+        private func calculateIndentation(textStorage: NSTextStorage, range: NSRange) -> Int {
+            let text = textStorage.string as NSString
+            let textBeforeCursor = text.substring(to: range.location)
+            
+            var bracketCount = 0
+            for char in textBeforeCursor {
+                if char == "{" {
+                    bracketCount += 1
+                } else if char == "}" {
+                    bracketCount = max(0, bracketCount - 1)
+                }
+            }
+            
+            return bracketCount
+        }
+        
+        // MARK: - NSTextStorageDelegate
         func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions, range editedRange: NSRange, changeInLength delta: Int) {
             // Track only those changes, where text storage updates whole text
             if editedMask.contains(.editedCharacters) && delta == 0 {
