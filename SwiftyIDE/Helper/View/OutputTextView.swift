@@ -67,8 +67,8 @@ final class OutputTextNSView: NSView {
         textView.isVerticallyResizable = true
         textView.delegate = delegate
         
-        textView.backgroundColor = NSColor.textBackgroundColor
-        textView.textColor = NSColor.labelColor
+        textView.backgroundColor = .primaryBackground
+        textView.textColor = .labelColor
         
         return textView
     }()
@@ -77,16 +77,9 @@ final class OutputTextNSView: NSView {
         let sv = NSScrollView()
         sv.documentView = textView
         sv.hasVerticalScroller = true
-        sv.hasHorizontalScroller = true
-        // Hide scrollers when not in use
-        sv.autohidesScrollers = true
-        
+        sv.hasHorizontalScroller = false
         sv.contentInsets = .init(top: 8, left: 4, bottom: 4, right: 4)
         sv.automaticallyAdjustsContentInsets = false
-        // Remove extra space around scrollbars
-        sv.scrollerInsets = .init()
-
-        sv.borderType = .noBorder
         sv.translatesAutoresizingMaskIntoConstraints = false
 
         return sv

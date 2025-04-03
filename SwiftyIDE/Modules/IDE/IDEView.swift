@@ -22,19 +22,24 @@ struct IDEView: View {
                 .frame(minHeight: 500)
                 .padding(.zero)
         } outputContent: {
+            let commonPadding: CGFloat = vm.didErrorHappen ? 2 : 0
             OutputTextView(appendPublisher: vm.outputAppendPublisher)
                 .focused($currentFocus, equals: .output)
                 .frame(minHeight: 100)
-                .padding(.top)
+                .padding(commonPadding)
                 .overlay(alignment: .topTrailing) {
                     Button {
                         vm.clearOutput()
                     } label: {
                         Image(systemName: "xmark.bin.fill")
                     }
-                    .padding()
+                    .padding(commonPadding)
+                    // Padding from the text view's scroller
+                    .padding(.trailing, 20)
+                    .animation(.easeInOut(duration: 0.2), value: vm.didErrorHappen)
                 }
-            
+                .background(vm.didErrorHappen ? Color.pink : Color.green)
+                .animation(.easeInOut(duration: 0.2), value: vm.didErrorHappen)
         }
         .onAppear {
             currentFocus = .editor

@@ -11,6 +11,7 @@ import SwiftUI
 struct EditorTextView: NSViewRepresentable {
     @Binding var text: String
     var font: NSFont = .defaultCodeFont
+    var textColor: NSColor = .labelColor
     
     var onEditingChanged: () -> Void       = {}
     var onCommit        : () -> Void       = {}
@@ -24,6 +25,7 @@ struct EditorTextView: NSViewRepresentable {
         let textView = EditorTextNSView(
             text: text,
             font: font,
+            textColor: textColor,
             delegate: context.coordinator
         )
         return textView
@@ -40,7 +42,7 @@ extension EditorTextView {
     final class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate {
         var parent: EditorTextView
         var selectedRanges: [NSValue] = []
-        lazy private var syntaxHighlighter = SyntaxHighlighter(defaultFont: parent.font)
+        lazy private var syntaxHighlighter = SyntaxHighlighter(defaultFont: parent.font, defaultColor: parent.textColor)
         
         init(_ parent: EditorTextView) {
             self.parent = parent
@@ -112,6 +114,7 @@ final class EditorTextNSView: NSView {
     
     private weak var delegate: (NSTextViewDelegate & NSTextStorageDelegate)?
     private var font: NSFont?
+    private var textColor: NSColor?
     private lazy var textView: NSTextView = {
         let textView = NSTextView()
         
@@ -124,8 +127,8 @@ final class EditorTextNSView: NSView {
         textView.isRichText = false
         
         textView.font = self.font
-        textView.backgroundColor = NSColor.textBackgroundColor
-        textView.textColor = NSColor.labelColor
+        textView.textColor = self.textColor
+        textView.backgroundColor = .primaryBackground
         
         textView.delegate = self.delegate
         textView.textStorage?.delegate = self.delegate
@@ -150,8 +153,9 @@ final class EditorTextNSView: NSView {
     }()
     
     // MARK: - Init
-    init(text: String, font: NSFont? = nil, delegate: (NSTextViewDelegate & NSTextStorageDelegate)) {
+    init(text: String, font: NSFont? = nil, textColor: NSColor? = nil, delegate: (NSTextViewDelegate & NSTextStorageDelegate)) {
         self.font = font
+        self.textColor = textColor
         self.text = text
         self.delegate = delegate
         super.init(frame: .zero)

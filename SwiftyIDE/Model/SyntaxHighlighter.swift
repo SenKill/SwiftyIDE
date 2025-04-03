@@ -36,23 +36,23 @@ final class SyntaxHighlighter {
             case .comments:
                 // Matches regular and multiline comments
                 pattern = "(\\/\\*[\\s\\S]*?(\\*\\/))|(\\/\\*[\\s\\S]*$)|(//.*)"
-                foregroundColor = NSColor(red: 38/255, green: 117/255, blue: 7/255, alpha: 1)
+                foregroundColor = .codeComments
                 font = .monospacedSystemFont(ofSize: 13, weight: .regular)
             case .strings:
                 // Matches string literals, handling escaped quotes
                 pattern = "\"(?:\\\\.|[^\"\\\\])*\""
-                foregroundColor = NSColor.systemRed
+                foregroundColor = .codeStrings
                 font = .monospacedSystemFont(ofSize: 13, weight: .regular)
             case .characters:
                 // Matches character literals enclosed in single quotes
                 pattern = "'(?:\\\\.|[^'\\\\]*)'"
-                foregroundColor = NSColor.systemOrange
+                foregroundColor = .codeCharacters
                 font = .monospacedSystemFont(ofSize: 13, weight: .regular)
                 
             case .numbers:
                 // Matches integers and floating point numbers
                 pattern = "\\b\\d+(?:\\.\\d+)?\\b"
-                foregroundColor = NSColor.systemPink
+                foregroundColor = .codeNumbers
                 font = .monospacedSystemFont(ofSize: 13, weight: .regular)
             case .keywords:
                 // Matches keywords from a list
@@ -64,13 +64,13 @@ final class SyntaxHighlighter {
                 ]
                 
                 pattern = "\\b(?:" + keywords.joined(separator: "|") + ")\\b"
-                foregroundColor = NSColor.systemBlue
+                foregroundColor = .codeKeywords
                 font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
                 
             case .typeDeclarations:
                 // Simply matches type names that commonly start with an uppercase letter
                 pattern = "\\b[A-Z][A-Za-z0-9_]*\\b"
-                foregroundColor = NSColor.systemPurple
+                foregroundColor = .codeTypeDeclarations
                 font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
             }
             let regex = try? NSRegularExpression(pattern: pattern)
@@ -83,6 +83,8 @@ final class SyntaxHighlighter {
     }
     
     let defaultFont: NSFont
+    let defaultColor: NSColor
+    
     private var sortedCodeTypes: [CodeProperties] = CodeType.sortedTypes.map({ $0.properties })
     lazy private var joinedRegex: NSRegularExpression? = {
         let joinedPatterns = sortedCodeTypes.map { "(\($0.pattern))" }.joined(separator: "|")
@@ -90,8 +92,9 @@ final class SyntaxHighlighter {
         return regex
     }()
     
-    init(defaultFont: NSFont) {
+    init(defaultFont: NSFont, defaultColor: NSColor) {
         self.defaultFont = defaultFont
+        self.defaultColor = defaultColor
     }
     
     func highlightSyntax(in textStorage: NSTextStorage, range editedRange: NSRange) {
@@ -100,7 +103,10 @@ final class SyntaxHighlighter {
         let extendedRange = text.lineRange(for: editedRange)
         
         textStorage.beginEditing()
-        textStorage.removeAttribute(.foregroundColor, range: extendedRange)
+        textStorage.setAttributes([
+            .font: defaultFont,
+            .foregroundColor: defaultColor
+        ], range: extendedRange)
         // Check all code types
         guard let regex = joinedRegex else { return }
         // Use joined regex
@@ -111,7 +117,7 @@ final class SyntaxHighlighter {
                 let range = match.range(at: i)
                 if range.location != NSNotFound {
                     let attributes = sortedCodeTypes[i-1].attributes
-                    textStorage.addAttributes(attributes, range: range)
+                    textStorage.setAttributes(attributes, range: range)
                     break
                 }
             }

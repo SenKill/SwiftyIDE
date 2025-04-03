@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct Settings {
-    static let defaultFont: Font = .custom("SF Mono Regular", size: 14)
     static let gutterWidth: CGFloat = 40
-    static let selectionGutterColor: NSColor = NSColor(red: 35/255, green: 47/255, blue: 43/255, alpha: 0.3)
+    static let standardScriptName: String = "foo.swift"
+    static let maxOutputLength: Int64 = 1000000
 }

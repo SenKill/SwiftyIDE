@@ -13,6 +13,7 @@ final class IDEViewModel: ObservableObject {
     enum TerminationType: String {
         case warning
         case error
+        case note
     }
     
     @Published var codeText: String = ""
@@ -63,10 +64,7 @@ final class IDEViewModel: ObservableObject {
     private func runScript(with url: URL) -> Bool {
         // To be sure :)
         stopScript()
-        didErrorHappen = false
         // A class to run and track an executable
-        // MARK: Doesn't show live output
-        // TODO: Make live output
         let process = Process()
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -106,8 +104,8 @@ private extension IDEViewModel {
                 
                 // Style
                 outputString.setAttributes([
-                    .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
-                    .foregroundColor: NSColor.black
+                    .font: NSFont.outputFont,
+                    .foregroundColor: NSColor.outputDefaultText
                 ], range: NSRange(location: 0, length: outputString.length))
                 
                 // Making changes on the main queue
@@ -142,7 +140,7 @@ private extension IDEViewModel {
             }
             let returnCode = process.terminationStatus
             let termStatusAttributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
+                .font: NSFont.termStatusFont,
                 .foregroundColor: returnCode == 0
                     ? NSColor(red: 0, green: 0.6, blue: 0, alpha: 1)  // Success: Green
                     : NSColor(red: 0.8, green: 0.4, blue: 0, alpha: 1) // Failure: Orange
@@ -187,19 +185,19 @@ private extension IDEViewModel {
             print("ERROR: setGeneralAttributes() | Couldn't get termination type")
             return
         }
-        let attributes: [NSAttributedString.Key: Any]
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.errorFont
+        ]
         
         switch termType {
         case .warning:
-            attributes = [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold),
-                .foregroundColor: NSColor(red: 1, green: 0.65, blue: 0, alpha: 1) // Orange
-            ]
-        case .error:
-            attributes = [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold),
-                .foregroundColor: NSColor(red: 0.8, green: 0, blue: 0, alpha: 1) // Red
-            ]
+            print("Warning")
+            attributes[.foregroundColor] = NSColor.outputWarningText
+            break
+        case .error, .note:
+            print("Error")
+            attributes[.foregroundColor] = NSColor.outputErrorText
+            break
         }
         termString.setAttributes(attributes, range: wholeRange)
     }

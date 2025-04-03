@@ -124,7 +124,7 @@ final class EditorGutterNSView: NSRulerView {
     func drawLineNumber(with lineNumber: Int, at yPosition: CGFloat, isSelected: Bool) {
         let label = "\(lineNumber)"
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: Settings.gutterLineFont,
+            .font: NSFont.gutterLineFont,
             .foregroundColor: isSelected ? NSColor.labelColor : NSColor.secondaryLabelColor
         ]
         let attLabel = NSAttributedString(string: label, attributes: attributes)
