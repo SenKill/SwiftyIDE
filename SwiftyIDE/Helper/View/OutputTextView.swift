@@ -78,8 +78,17 @@ final class OutputTextNSView: NSView {
         sv.documentView = textView
         sv.hasVerticalScroller = true
         sv.hasHorizontalScroller = true
-        sv.autohidesScrollers = false
+        // Hide scrollers when not in use
+        sv.autohidesScrollers = true
+        
+        sv.contentInsets = .init(top: 8, left: 4, bottom: 4, right: 4)
+        sv.automaticallyAdjustsContentInsets = false
+        // Remove extra space around scrollbars
+        sv.scrollerInsets = .init()
+
+        sv.borderType = .noBorder
         sv.translatesAutoresizingMaskIntoConstraints = false
+
         return sv
     }()
     
@@ -91,7 +100,11 @@ final class OutputTextNSView: NSView {
     func appendText(_ text: NSAttributedString) {
         textView.textStorage?.append(text)
         let textLength = textView.textStorage?.length ?? 0
-        textView.scrollRangeToVisible(NSRange(location: textLength, length: 0))
+        if textLength > Settings.maxOutputLength {
+            textView.string = ""
+        } else {
+            textView.scrollRangeToVisible(NSRange(location: textLength, length: 0))
+        }
     }
     
     func clearText() {
@@ -106,6 +119,7 @@ final class OutputTextNSView: NSView {
     
     override func viewWillDraw() {
         super.viewWillDraw()
+        scrollView.scrollerInsets = .init()
         setUpConstraints()
     }
     
