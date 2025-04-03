@@ -64,6 +64,7 @@ final class EditorGutterNSView: NSRulerView {
         // Compute the number of lines preceding the visibleCharRange
         var lineNumber: Int = countOccurrences(in: textView.string, pattern: "\n", range: NSMakeRange(0, visibleGlyphRange.location))
         var lastLineRect: NSRect = .zero
+        var lastLineHeight = lastLineRect.height
         
         while glyphIndex < visibleGlyphRange.upperBound {
             var effectiveRange = NSRange(location: 0, length: 0)
@@ -84,9 +85,16 @@ final class EditorGutterNSView: NSRulerView {
                 }
             }
             
+            // Workaround to fix problem with empty string
+            if lastLineRect.height == 14 {
+                lastLineHeight = 16
+            } else {
+                lastLineHeight = lastLineRect.height
+            }
+            
             // Check if the line's rect intersects the drawing rect
-            if yRulerPos + lastLineRect.height >= rect.minY && yRulerPos <= rect.maxY {
-                let yLinePos = yRulerPos + lastLineRect.height / 2
+            if yRulerPos + lastLineHeight >= rect.minY && yRulerPos <= rect.maxY {
+                let yLinePos = yRulerPos + lastLineHeight / 2
                 drawLineNumber(with: lineNumber, at: yLinePos, isSelected: isLineSelected)
             }
             // Move to the next line
@@ -101,9 +109,9 @@ final class EditorGutterNSView: NSRulerView {
             let lastGlyphRange = layoutManager.glyphRange(forCharacterRange: NSRange(location: lastCharIndex, length: 1), actualCharacterRange: nil)
             
             // Calculate last ruler's y position based on previous' line rect
-            let yRulerPos = lastLineRect.origin.y + relativePoint.y + lastLineRect.height
-            if yRulerPos + lastLineRect.height >= rect.minY && yRulerPos <= rect.maxY {
-                let yLinePos = yRulerPos + lastLineRect.height / 2
+            let yRulerPos = lastLineRect.origin.y + relativePoint.y + lastLineHeight
+            if yRulerPos + lastLineHeight >= rect.minY && yRulerPos <= rect.maxY {
+                let yLinePos = yRulerPos + lastLineHeight / 2
                 var isLineSelected = false
                 if let selectedRange = selectedCharRanges.first {
                     isLineSelected = selectedRange.location == lastGlyphRange.upperBound
@@ -116,7 +124,7 @@ final class EditorGutterNSView: NSRulerView {
     func drawLineNumber(with lineNumber: Int, at yPosition: CGFloat, isSelected: Bool) {
         let label = "\(lineNumber)"
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+            .font: Settings.gutterLineFont,
             .foregroundColor: isSelected ? NSColor.labelColor : NSColor.secondaryLabelColor
         ]
         let attLabel = NSAttributedString(string: label, attributes: attributes)

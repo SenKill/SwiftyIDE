@@ -10,7 +10,7 @@ import SwiftUI
 
 struct EditorTextView: NSViewRepresentable {
     @Binding var text: String
-    var font: NSFont = Settings.defaultCodeFont
+    var font: NSFont = .defaultCodeFont
     
     var onEditingChanged: () -> Void       = {}
     var onCommit        : () -> Void       = {}
@@ -197,7 +197,6 @@ final class EditorTextNSView: NSView {
         guard let stringLink = notification.object as? String else { return }
         // Link looks like "row,col"
         let position = stringLink.components(separatedBy: ",")
-        print(position)
         guard let row = Int(position.first ?? ""), let col = Int(position.last ?? "") else { return }
         let numberOfChars = getCharPosition(row: row, col: col, in: text)
         let errorRange = NSRange(location: numberOfChars, length: 0)
