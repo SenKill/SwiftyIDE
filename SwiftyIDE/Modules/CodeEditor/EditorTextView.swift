@@ -77,6 +77,7 @@ extension EditorTextView {
                 // Insert new line with proper indentation
                 let newText = "\n" + indentString
                 textView.insertText(newText, replacementRange: range)
+                parent.text = textView.string
                 return false // Prevent default behavior
             }
             
@@ -86,6 +87,7 @@ extension EditorTextView {
                 if subString.last == "\t" {
                     let deleteRange = NSRange(location: range.location-1, length: 1)
                     textStorage.mutableString.replaceCharacters(in: deleteRange, with: "}")
+                    parent.text = textStorage.string
                     return false
                 }
             }
@@ -99,11 +101,27 @@ extension EditorTextView {
             let textBeforeCursor = text.substring(to: range.location)
             
             var bracketCount = 0
+            var hasComment: Bool = false
+            var lastNewLine: Bool = false
+            
             for char in textBeforeCursor {
-                if char == "{" {
-                    bracketCount += 1
-                } else if char == "}" {
-                    bracketCount = max(0, bracketCount - 1)
+                if char == "/" {
+                    if lastNewLine {
+                        hasComment = true
+                    }
+                    lastNewLine = true
+                } else if char == "\n" {
+                    hasComment = false
+                } else {
+                    lastNewLine = false
+                }
+                
+                if !hasComment {
+                    if char == "{" {
+                        bracketCount += 1
+                    } else if char == "}" {
+                        bracketCount = max(0, bracketCount - 1)
+                    }
                 }
             }
             
@@ -112,8 +130,7 @@ extension EditorTextView {
         
         // MARK: - NSTextStorageDelegate
         func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions, range editedRange: NSRange, changeInLength delta: Int) {
-            // Track only those changes, where text storage updates whole text
-            if editedMask.contains(.editedCharacters) && delta == 0 {
+            if editedMask.contains(.editedCharacters) {
                 self.syntaxHighlighter.highlightSyntax(in: textStorage, range: editedRange)
             }
         }
@@ -123,11 +140,7 @@ extension EditorTextView {
 // MARK: - Custom Text View
 final class EditorTextNSView: NSView {
     // MARK: - Properties
-    var text: String {
-        didSet {
-            textView.string = text
-        }
-    }
+    var text: String
     var selectedRanges: [NSValue] = [] {
         didSet {
             guard selectedRanges.count > 0 else {
@@ -155,6 +168,11 @@ final class EditorTextNSView: NSView {
         textView.font = self.font
         textView.textColor = self.textColor
         textView.backgroundColor = .primaryBackground
+        
+        textView.typingAttributes = [
+            .font: NSFont.defaultCodeFont,
+            .foregroundColor: NSColor.labelColor
+        ]
         
         textView.delegate = self.delegate
         textView.textStorage?.delegate = self.delegate
