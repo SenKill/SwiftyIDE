@@ -12,7 +12,7 @@ enum CurrentFocus {
 }
 
 struct IDEView: View {
-    @StateObject private var vm = IDEViewModel()
+    @EnvironmentObject private var vm: IDEViewModel
     @FocusState private var currentFocus: CurrentFocus?
     
     var body: some View {
@@ -28,9 +28,7 @@ struct IDEView: View {
                 .frame(minHeight: 100)
                 .padding(commonPadding)
                 .overlay(alignment: .topTrailing) {
-                    Button {
-                        vm.clearOutput()
-                    } label: {
+                    Button(action: vm.clearOutput) {
                         Image(systemName: "xmark.bin.fill")
                     }
                     .padding(commonPadding)
@@ -46,20 +44,15 @@ struct IDEView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                    Button {
-                        vm.runScript()
-                    } label: {
-                        Image(systemName: "play.fill")
-                    }
-                    .disabled(vm.isScriptRunning)
-                
+                Button(action: vm.runScript) {
+                    Image(systemName: "play.fill")
+                }
+                .disabled(vm.isScriptRunning)
             } label: {
                 Text("Compile program")
             }
             ToolbarItemGroup(placement: .cancellationAction) {
-                Button {
-                    vm.stopScript()
-                } label: {
+                Button(action: vm.stopScript) {
                     Image(systemName: "stop.fill")
                 }
                 .disabled(!vm.isScriptRunning)
