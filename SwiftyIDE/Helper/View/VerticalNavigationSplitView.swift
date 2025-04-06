@@ -18,7 +18,7 @@ struct VerticalNavigationSplitView<EditorContent: View, OutputContent: View>: NS
     }
     
     func makeNSViewController(context: Context) -> NSSplitViewController {
-        let splitVC = NSSplitViewController()
+        let splitVC = RatioSplitViewController()
         
         // Editor pane
         let editorItem = NSSplitViewItem(viewController: NSHostingController(rootView: editorContent))
@@ -37,12 +37,32 @@ struct VerticalNavigationSplitView<EditorContent: View, OutputContent: View>: NS
         
         return splitVC
     }
+    
     func updateNSViewController(_ nsViewController: NSSplitViewController, context: Context) {
         if let editorVC = nsViewController.splitViewItems[0].viewController as? NSHostingController<EditorContent> {
             editorVC.rootView = editorContent
         }
         if let outputVC = nsViewController.splitViewItems[1].viewController as? NSHostingController<OutputContent> {
             outputVC.rootView = outputContent
+        }
+    }
+}
+
+// Custom class only to set split views' default ratio
+final fileprivate class RatioSplitViewController: NSSplitViewController {
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        setInitialSplitRatio()
+    }
+    
+    private func setInitialSplitRatio() {
+        let totalHeight = splitView.bounds.height
+        let editorRatio = 0.7
+        
+        // Ensure valid size
+        if totalHeight > 0 {
+            let editorHeight = totalHeight * editorRatio
+            splitView.setPosition(editorHeight, ofDividerAt: 0)
         }
     }
 }

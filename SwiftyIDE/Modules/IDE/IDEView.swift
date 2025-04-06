@@ -19,13 +19,11 @@ struct IDEView: View {
         VerticalNavigationSplitView {
             EditorTextView(text: $vm.codeText)
                 .focused($currentFocus, equals: .editor)
-                .frame(minHeight: 500)
                 .padding(.zero)
         } outputContent: {
             let commonPadding: CGFloat = vm.didErrorHappen ? 2 : 0
             OutputTextView(appendPublisher: vm.outputAppendPublisher)
                 .focused($currentFocus, equals: .output)
-                .frame(minHeight: 100)
                 .padding(commonPadding)
                 .overlay(alignment: .topTrailing) {
                     Button(action: vm.clearOutput) {
