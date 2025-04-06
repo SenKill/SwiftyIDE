@@ -10,11 +10,11 @@ import SwiftUI
 // Manually loading all fonts..
 func registerFonts() {
     let fontNames = [
-        "JetBrainsMono-Light",
-        "JetBrainsMono-Regular",
-        "JetBrainsMono-Medium",
-        "JetBrainsMono-SemiBold",
-        "JetBrainsMono-Bold"
+        "JetBrainsMonoNL-Light",
+        "JetBrainsMonoNL-Regular",
+        "JetBrainsMonoNL-Medium",
+        "JetBrainsMonoNL-SemiBold",
+        "JetBrainsMonoNL-Bold"
     ]
 
     for name in fontNames {

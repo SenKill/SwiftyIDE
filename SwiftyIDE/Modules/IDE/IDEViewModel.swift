@@ -191,11 +191,9 @@ private extension IDEViewModel {
         
         switch termType {
         case .warning:
-            print("Warning")
             attributes[.foregroundColor] = NSColor.outputWarningText
             break
         case .error, .note:
-            print("Error")
             attributes[.foregroundColor] = NSColor.outputErrorText
             break
         }

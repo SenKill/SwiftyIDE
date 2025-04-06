@@ -18,10 +18,10 @@ extension NSFont {
         return font
     }
     
-    static let defaultCodeFont: NSFont = .loadCustomFont(named: "JetBrainsMono-Regular", size: 13)
-    static let boldCodeFont: NSFont = .loadCustomFont(named: "JetBrainsMono-SemiBold", size: 13)
-    static let gutterLineFont: NSFont = .loadCustomFont(named: "JetBrainsMono-Light", size: 11)
-    static let outputFont: NSFont = .loadCustomFont(named: "JetBrainsMono-Regular", size: 13)
-    static let errorFont: NSFont = .loadCustomFont(named: "JetBrainsMono-Bold", size: 12)
-    static let termStatusFont: NSFont = .loadCustomFont(named: "JetBrainsMono-Medium", size: 13)
+    static let defaultCodeFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-Regular", size: 13)
+    static let boldCodeFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-SemiBold", size: 13)
+    static let gutterLineFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-Light", size: 11)
+    static let outputFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-Regular", size: 13)
+    static let errorFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-Bold", size: 12)
+    static let termStatusFont: NSFont = .loadCustomFont(named: "JetBrainsMonoNL-Medium", size: 13)
 }

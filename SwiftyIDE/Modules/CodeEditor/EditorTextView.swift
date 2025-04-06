@@ -165,6 +165,14 @@ final class EditorTextNSView: NSView {
         textView.isVerticallyResizable = true
         textView.isRichText = false
         
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        
         textView.font = self.font
         textView.textColor = self.textColor
         textView.backgroundColor = .primaryBackground

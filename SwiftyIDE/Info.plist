@@ -4,11 +4,11 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>JetBrainsMono-Bold.ttf</string>
-		<string>JetBrainsMono-Light.ttf</string>
-		<string>JetBrainsMono-Medium.ttf</string>
-		<string>JetBrainsMono-Regular.ttf</string>
-		<string>JetBrainsMono-SemiBold.ttf</string>
+		<string>JetBrainsMonoNL-Bold.ttf</string>
+		<string>JetBrainsMonoNL-Light.ttf</string>
+		<string>JetBrainsMonoNL-Medium.ttf</string>
+		<string>JetBrainsMonoNL-Regular.ttf</string>
+		<string>JetBrainsMonoNL-SemiBold.ttf</string>
 	</array>
 </dict>
 </plist>
