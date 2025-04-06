@@ -85,23 +85,45 @@ final class OutputTextNSView: NSView {
         return sv
     }()
     
+    private var scrollDebounceTimer: Timer?
+    private let debounceInterval = 0.2
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     // MARK: - Public
+    func clearText() {
+        textView.textStorage?.setAttributedString(.init())
+    }
+    
     func appendText(_ text: NSAttributedString) {
         textView.textStorage?.append(text)
         let textLength = textView.textStorage?.length ?? 0
         if textLength > Settings.maxOutputLength {
             textView.string = ""
         } else {
-            textView.scrollRangeToVisible(NSRange(location: textLength, length: 0))
+            scrollDebounceTimer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                self.debounceScroll(to: textLength)
+            }
         }
     }
     
-    func clearText() {
-        textView.textStorage?.setAttributedString(.init())
+    // MARK: - Private functions
+    private func debounceScroll(to length: Int) {
+        scrollDebounceTimer?.invalidate()
+        textView.scrollRangeToVisible(NSRange(location: length, length: 0))
+    }
+    
+    private func setUpConstraints() {
+        addSubview(scrollView)
+        NSLayoutConstraint.activate([
+            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
     
     // MARK: - Life Cycle
@@ -114,15 +136,5 @@ final class OutputTextNSView: NSView {
         super.viewWillDraw()
         scrollView.scrollerInsets = .init()
         setUpConstraints()
-    }
-    
-    private func setUpConstraints() {
-        addSubview(scrollView)
-        NSLayoutConstraint.activate([
-            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
     }
 }
